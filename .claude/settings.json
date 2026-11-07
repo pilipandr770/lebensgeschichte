@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make test)",
+      "Bash(make validate)",
+      "Bash(python3 -m unittest:*)",
+      "Bash(npm run build)"
+    ],
+    "deny": [
+      "Read(./.env)"
+    ]
+  }
+}

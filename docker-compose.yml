@@ -1,0 +1,22 @@
+# Запуск: cp .env.example .env, заполнить, затем: docker compose up --build
+# Приложение: http://localhost:8080
+services:
+  backend:
+    build:
+      context: ./src/backend
+      args:
+        INSTALL_OPTIONAL: ${INSTALL_OPTIONAL:-weasyprint}
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./src/frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

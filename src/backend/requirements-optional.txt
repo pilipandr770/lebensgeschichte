@@ -1,0 +1,4 @@
+# Локальное распознавание речи (STT_PROVIDER=faster_whisper). Тяжёлая зависимость, нужен ffmpeg; для GPU нужен CUDA.
+faster-whisper>=1.1
+# PDF-экспорт книги. Нужны системные библиотеки pango (в Docker-образе уже есть).
+weasyprint>=62
