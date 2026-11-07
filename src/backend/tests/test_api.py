@@ -80,6 +80,15 @@ class ApiTests(unittest.TestCase):
         files = list((self.app.config["CFG"].audio_dir).rglob("*.webm"))
         self.assertEqual(len(files), 1)  # запись не теряется
 
+    def test_whisper_hallucination_is_dropped(self):
+        from app.stt import clean_transcript
+        self.assertEqual(clean_transcript("Редактор субтитров А.Синецкая Корректор А.Егорова"), "")
+        self.assertEqual(clean_transcript("Продолжение следует..."), "")
+        self.assertEqual(clean_transcript("Untertitel im Auftrag des ZDF, 2020"), "")
+        real = "Мы жили у реки, а бабушка была корректором в местной газете."
+        self.assertEqual(clean_transcript(real), real)
+        self.assertEqual(clean_transcript("  "), "")
+
     def test_audio_upload_mock_stt(self):
         s = self.j("post", "/api/session/start").get_json()
         data = {"session_id": str(s["session_id"]), "question_id": "i1", "audio": (io.BytesIO(b"fake-audio"), "a.webm", "audio/webm")}

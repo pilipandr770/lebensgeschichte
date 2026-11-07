@@ -11,7 +11,7 @@ from .auth import require_auth
 from .llm import clean_extraction
 from .questions import NAME_KEYS, SENSITIVE_TAGS, TAG_KEYS, build_ctx, evaluate, record_answer
 from .safety import detect_crisis
-from .stt import new_audio_name
+from .stt import clean_transcript, new_audio_name
 
 log = logging.getLogger(__name__)
 bp = Blueprint("api", __name__)
@@ -184,7 +184,7 @@ def turn():
         names = [profile["tags"].get("partner_name"), profile["tags"].get("birth_place")]
         prompt = ", ".join(n for n in names if n) or None
         try:
-            transcript = svc().stt.transcribe(audio_path, cfg().stt_language, prompt)
+            transcript = clean_transcript(svc().stt.transcribe(audio_path, cfg().stt_language, prompt))
         except Exception:  # noqa: BLE001
             log.exception("STT failed")
             # Не 5xx: Cloudflare подменяет 502/504 своей страницей, и приложение не увидит причину.
