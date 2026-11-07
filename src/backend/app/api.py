@@ -187,7 +187,9 @@ def turn():
             transcript = svc().stt.transcribe(audio_path, cfg().stt_language, prompt)
         except Exception:  # noqa: BLE001
             log.exception("STT failed")
-            return jsonify(error="stt_failed"), 502
+            # Не 5xx: Cloudflare подменяет 502/504 своей страницей, и приложение не увидит причину.
+            # Аудиофайл остаётся на диске, запись не теряется.
+            return jsonify(status="stt_failed", error="stt_failed", transcript="", reply="")
         if not cfg().store_audio:
             audio_path.unlink(missing_ok=True)
             audio_path = None

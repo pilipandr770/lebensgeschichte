@@ -67,6 +67,19 @@ class ApiTests(unittest.TestCase):
         # i5b про детей не должен задаваться, т.к. дети уже известны
         self.assertNotEqual(r["next"]["question"]["id"], "i5b")
 
+    def test_stt_failure_is_not_5xx_and_keeps_audio(self):
+        class Boom:
+            def transcribe(self, *a, **k):
+                raise RuntimeError("quota")
+        self.app.extensions["services"].stt = Boom()
+        s = self.j("post", "/api/session/start").get_json()
+        data = {"session_id": str(s["session_id"]), "question_id": "i1", "audio": (io.BytesIO(b"fake-audio"), "a.webm", "audio/webm")}
+        r = self.j("post", "/api/turn", data=data, content_type="multipart/form-data")
+        self.assertEqual(r.status_code, 200)  # не 5xx: Cloudflare подменяет 502/504 своей страницей
+        self.assertEqual(r.get_json()["status"], "stt_failed")
+        files = list((self.app.config["CFG"].audio_dir).rglob("*.webm"))
+        self.assertEqual(len(files), 1)  # запись не теряется
+
     def test_audio_upload_mock_stt(self):
         s = self.j("post", "/api/session/start").get_json()
         data = {"session_id": str(s["session_id"]), "question_id": "i1", "audio": (io.BytesIO(b"fake-audio"), "a.webm", "audio/webm")}

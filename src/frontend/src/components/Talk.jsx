@@ -24,6 +24,7 @@ export default function Talk({ settings }) {
   const answered = useRef(null); // вопрос, на который только что ответили
   const cont = useRef(false); // «рассказать ещё» к тому же вопросу
   const sessionRef = useRef(null);
+  const lastBlob = useRef(null); // последняя запись, которую не удалось распознать
 
   const say = useCallback(
     (t) => (voiceOn && t ? speak(t, { lang: guessLang(t), slow }) : Promise.resolve()),
@@ -65,6 +66,19 @@ export default function Talk({ settings }) {
         if (q) form.append("question_id", q.id);
         if (cont.current) form.append("continue", "1");
         const r = await api.postForm("/turn", form);
+        if (r.status === "stt_failed") {
+          // запись не теряем: человек может отправить её ещё раз или написать текстом
+          lastBlob.current = blob || null;
+          setError(
+            blob
+              ? "Не получилось распознать речь. Ваша запись не потеряна: нажмите «Отправить запись ещё раз»" +
+                (textOn ? " или напишите текстом." : ".")
+              : "Не получилось обработать текст. Попробуйте ещё раз."
+          );
+          setPhase("ready");
+          return;
+        }
+        lastBlob.current = null;
         setText("");
         if (r.status === "empty") {
           setNote("Я не смог разобрать запись. Попробуйте ещё раз.");
@@ -115,6 +129,8 @@ export default function Talk({ settings }) {
 
   const act = async (fn) => {
     cancelSpeech();
+    lastBlob.current = null;
+    setError("");
     try {
       const r = await fn();
       setCrisis(false);
@@ -247,6 +263,9 @@ export default function Talk({ settings }) {
               <p className="lead">Я вас слушаю…</p>
               <button className="big primary" onClick={recorder.stop}>Закончить</button>
             </div>
+          )}
+          {phase === "ready" && lastBlob.current && (
+            <button className="big primary" onClick={() => send(lastBlob.current, null)}>Отправить запись ещё раз</button>
           )}
           {textOn && phase === "ready" && (
             <div className="textmode">
