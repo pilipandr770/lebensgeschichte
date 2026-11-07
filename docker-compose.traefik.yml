@@ -1,0 +1,39 @@
+# Вариант для существующего VPS с Traefik (порты 80/443 принадлежат Traefik, свой Caddy не нужен).
+# Сертификат через resolver "cfdns" (Cloudflare DNS), как у остальных проектов на сервере.
+#   cd /opt/lebensgeschichte && docker compose -f docker-compose.traefik.yml up -d --build
+# Нужно: .env с заполненными SECRET_KEY, ANTHROPIC_API_KEY и DOMAIN=<поддомен>, A-запись домена на IP сервера.
+services:
+  backend:
+    build:
+      context: ./src/backend
+      args:
+        INSTALL_OPTIONAL: ${INSTALL_OPTIONAL:-weasyprint}
+    container_name: lebensgeschichte-backend
+    env_file: .env
+    environment:
+      DATA_DIR: /data
+    volumes:
+      - ./data:/data
+    restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  frontend:
+    build: ./src/frontend
+    container_name: lebensgeschichte-web
+    depends_on:
+      - backend
+    restart: unless-stopped
+    mem_limit: 128m
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.lebensgeschichte.entrypoints: websecure
+      traefik.http.routers.lebensgeschichte.rule: Host(`${DOMAIN:?DOMAIN in .env setzen}`)
+      traefik.http.routers.lebensgeschichte.tls.certresolver: cfdns
+      traefik.http.services.lebensgeschichte.loadbalancer.server.port: "80"
